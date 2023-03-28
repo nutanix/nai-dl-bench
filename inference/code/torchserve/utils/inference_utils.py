@@ -95,14 +95,13 @@ def get_inference(model_name, model_path, handler_path, index_file_path, input_p
         # For each input execute inference n=4 times
         for input in model_inputs:
             print(input)
-            for i in range(4):
-                response = ts.run_inference(model_name, input)
-                if response and response.status_code == 200:
-                    print(f"## Successfully ran inference on {model_name} model. \n\n Output - {response.text}\n\n")
-                else:
-                    print(f"## Failed to run inference on {model_name} model \n")
-                    error_msg_print()
-                    sys.exit(1)
+            response = ts.run_inference(model_name, input)
+            if response and response.status_code == 200:
+                print(f"## Successfully ran inference on {model_name} model. \n\n Output - {response.text}\n\n")
+            else:
+                print(f"## Failed to run inference on {model_name} model \n")
+                error_msg_print()
+                sys.exit(1)
 
         if model != resnet50_model:
             response = ts.unregister_model(model_name)

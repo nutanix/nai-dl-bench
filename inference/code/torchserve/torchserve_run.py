@@ -17,16 +17,16 @@ def torchserve_run(args):
         print(f"*\n*\n**************************************")
 
     finally:
-        cleanup(args.gen_folder_name, True, True)
+        cleanup(args.gen_folder_name, args.stop_server, args.ts_cleanup)
 
 
 def cleanup(gen_folder, ts_stop = True, ts_cleanup = True):
     if ts_stop:
         ts.stop_torchserve()
     
-    if ts_cleanup:
-        dirpath = os.path.dirname(__file__)
-        rm_dir(os.path.join(dirpath, 'utils', gen_folder))
+        if ts_cleanup:
+            dirpath = os.path.dirname(__file__)
+            rm_dir(os.path.join(dirpath, 'utils', gen_folder))
 
 
 if __name__ == '__main__':
@@ -59,7 +59,13 @@ if __name__ == '__main__':
                         metavar='f', help='Name for generate folder used to create temp files')
 
     parser.add_argument('--gen_mar', type=int, default=1, 
-                        metavar='f', help='generate mar file before starting')
+                        metavar='gm', help='generate mar file before starting')
+
+    parser.add_argument('--stop_server', type=int, default=1, 
+                        metavar='stop', help='Stop torchserve after run completion')
+
+    parser.add_argument('--ts_cleanup', type=int, default=1, 
+                        metavar='cleanup', help='clean up torchserve temp files after run completion')
 
     args = parser.parse_args()
     torchserve_run(args)
