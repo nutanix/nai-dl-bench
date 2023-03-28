@@ -43,7 +43,6 @@ fi
 
 function validate_file_path() {
     file=$1
-    echo "file $file"
     if [ ! -f "$file" ]
     then
         echo "$file does not exist. Please set the correct aboslute path to the file";

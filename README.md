@@ -71,7 +71,7 @@ pip install -r requirements.txt
 Generate new resnet-50.pt using the eager mode 
 
 ```
-python create_model_pt_file.py
+python create_model_pt_file.py --model_name resnet50 --weight ResNet50_Weights.DEFAULT
 ```
 
 Generate resnet50.mar file
