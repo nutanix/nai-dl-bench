@@ -71,13 +71,13 @@ pip install -r requirements.txt
 Generate new resnet-50.pt using the eager mode 
 
 ```
-python create_model_pt_file.py
+python create_model_pt_file.py --model_name resnet50 --weight ResNet50_Weights.DEFAULT
 ```
 
 Generate resnet50.mar file
 
 ```
-torch-model-archiver --model-name resnet50 --version 1.0 --model-file model_arch.py --serialized-file default-resnet-50-model.pt --handler image_classifier --extra-files index_to_name.json
+torch-model-archiver --model-name resnet50 --version 1.0 --model-file models/resnet50/resnet50_arch.py --serialized-file resnet50-default.pt --handler image_classifier --extra-files index_to_name.json
 ```
 
 Create a folder and move the .mar file inside it
@@ -163,7 +163,7 @@ run.sh is inside inference/code/torchserve folder
 
 command to run inference
 ```
-Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOLUTE_PATH> -f <MODEL_ARCH_FILE_ABSOLUTE_PATH> -c <CLASSES_MAPPING_ABSOLUTE_PATH> -h <HANDLER_FILE_ABSOLUTE_PATH> -e <EXTRA_FILES> -g <NUM_OF_GPUS>
+Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOLUTE_PATH> -f <MODEL_ARCH_FILE_ABSOLUTE_PATH> -c <CLASSES_MAPPING_ABSOLUTE_PATH> -h <HANDLER_FILE_ABSOLUTE_PATH> -e <EXTRA_FILES> -g <NUM_OF_GPUS> [OPTIONAL -k]
 
 -n Name of the Model
 -d Absolute path to the inputs folder that contains data to be predicted.
@@ -172,26 +172,62 @@ Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOL
 -c Absolute path classes mapping file
 -h Absolute path handler file
 -e Comma separated absolute paths of all the additional paths required by the model
--g Number of gpus to be used to execute. Default will be 0, cpu used 
+-g Number of gpus to be used to execute. Default will be 0, cpu used
+-k Keep the torchserve server alive after run completion. Default, stops the server if not set
 ```
 
-- Run Inference on the existing standard resnet-50 model provided in this repo.
-Set the name and data folder parameter as required 
+- Run Inference on the existing standard resnet50 model provided in this repo.
+Set the name and data folder parameter as required.
 ```
-bash inference/code/torchserve/run.sh -n resnet-50 -d /home/ubuntu/data 
+bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data
 ```
 
-- Run Inference on the trained resnet-50 model that was generated using the training code provided in this repo.
+- Run Inference on the trained resnet50 model that was generated using the training code provided in this repo.
 Set the name and data folder parameter as required and for GPU to be used set "-g <num>"
 ```
-bash inference/code/torchserve/run.sh -n resnet-50 -d /home/ubuntu/data -m resnet-50.pt -g 1
+bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -m resnet50.pt -g 1
 ```
 
 - Run Inference on the custom model of your choice.
 Make sure to set all the parameters as shown in the example
 ```
-bash inference/code/torchserve/run.sh -n resnet-50 -d /home/ubuntu/data -m /home/ubuntu/model/resnet-50.pt -f /home/ubuntu/model/model.py -c /home/ubuntu/index_to_name.json -h image_classifier -e /home/gavrishdemo/test/resnet50.py -g 2
+bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -m /home/ubuntu/model/resnet50.pt -f /home/ubuntu/model/model.py -c /home/ubuntu/index_to_name.json -h image_classifier -e /home/gavrishdemo/test/resnet50.py -g 2
 ```
 
 Should print "Inference Run Successful" as a message at the end
+
+##### Add custom models as default
+
+- create a folder inside "models" folder with the name of the model and add all the required files
+
+```
+models/
+    -custom100
+        - model.pt   // custom saved model can be stored in any location. Provide absolute path during cmd execution
+        - arch.py
+        - handler.py
+        - class_map.json
+```
+
+- make an entry for this custom model in "models/models.json"
+
+```
+{
+    .
+    .
+    .
+    "custom100": {
+        "model_arch_file": "arch.py",
+        "handler": "handler.py",
+        "class_map": "class_map.json"
+    }
+}
+```
+
+- run command 
+
+```
+bash inference/code/torchserve/run.sh -n custom100 -d /home/ubuntu/data -m models/custom100/model.pt
+```
+
 

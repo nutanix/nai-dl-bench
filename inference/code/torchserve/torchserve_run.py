@@ -1,7 +1,6 @@
 from utils.inference_utils import get_inference
 from utils.shell_utils import rm_dir, rm_file
 from utils import tsutils as ts
-from utils import marsgen as mg
 import os
 import argparse
 
@@ -10,23 +9,23 @@ def torchserve_run(args):
     try:
         # Run Inference
         get_inference(args.model_name, args.model_path, args.handler_path, args.classes, args.data, 
-            args.model_arch_path, args.extra_files, args.gpus, args.gen_folder_name, args.gen_mar)
+            args.model_arch_path, args.extra_files, args.gpus, args.gen_folder_name, args.gen_mar, args.debug_mode)
 
         print(f"\n**************************************")
         print(f"*\n*\n*  Inference Run Successful  ")
         print(f"*\n*\n**************************************")
 
     finally:
-        cleanup(args.gen_folder_name, True, True)
+        cleanup(args.gen_folder_name, args.stop_server, args.ts_cleanup)
 
 
 def cleanup(gen_folder, ts_stop = True, ts_cleanup = True):
     if ts_stop:
         ts.stop_torchserve()
     
-    if ts_cleanup:
-        dirpath = os.path.dirname(__file__)
-        rm_dir(os.path.join(dirpath, 'utils', gen_folder))
+        if ts_cleanup:
+            dirpath = os.path.dirname(__file__)
+            rm_dir(os.path.join(dirpath, 'utils', gen_folder))
 
 
 if __name__ == '__main__':
@@ -59,7 +58,16 @@ if __name__ == '__main__':
                         metavar='f', help='Name for generate folder used to create temp files')
 
     parser.add_argument('--gen_mar', type=int, default=1, 
-                        metavar='f', help='generate mar file before starting')
+                        metavar='gm', help='generate mar file before starting')
+
+    parser.add_argument('--stop_server', type=int, default=1, 
+                        metavar='stop', help='Stop torchserve after run completion')
+
+    parser.add_argument('--ts_cleanup', type=int, default=1, 
+                        metavar='cleanup', help='clean up torchserve temp files after run completion')
+
+    parser.add_argument('--debug_mode', type=int, default=0, 
+                        metavar='debug', help='run debug mode')
 
     args = parser.parse_args()
     torchserve_run(args)
