@@ -43,14 +43,13 @@ def start_torchserve(gen_folder,
         time.sleep(wait_for)
         return True
     else:
-        print("## TorchServe failed to start ! \n")
+        print("## TorchServe failed to start ! Make sure it's not running already\n")
         return False
 
 
 def stop_torchserve(wait_for=10):
     print("## Stopping TorchServe \n")
     cmd = f"{torchserve_command[platform.system()]} --stop"
-    print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
     status = os.system(cmd)
     if status == 0:
         print("## Successfully stopped TorchServe \n")
@@ -63,7 +62,7 @@ def stop_torchserve(wait_for=10):
 
 # Takes model name and mar name from model zoo as input
 def register_model(model_name, protocol="http", host="localhost", port="8081"):
-    print(f"## Registering {model_name} model \n")
+    print(f"\n## Registering {model_name} model \n")
     marfile = f"{model_name}.mar"
     params = (
         ("model_name", model_name),

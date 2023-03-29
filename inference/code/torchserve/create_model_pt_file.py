@@ -13,7 +13,7 @@ def create(model_name, weight_type):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='inference run script')
+    parser = argparse.ArgumentParser(description='Generate model file')
     parser.add_argument('--model_name', type=str, default="", required= True,
                         metavar='n', help='Name of the model')
     

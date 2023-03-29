@@ -1,6 +1,6 @@
 {
     "resnet50": {
-        "weights": "ResNet50_Weights.DEFAULT",
+        "weights": "ResNet50_Weights.DEFAULT", 
         "model_arch_file": "resnet50_arch.py",
         "handler": "image_classifier",
         "class_map": "index_to_name.json"

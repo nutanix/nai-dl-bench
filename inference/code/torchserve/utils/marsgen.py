@@ -20,10 +20,11 @@ def delete_model_store_gen_dir():
             shutil.rmtree(MODEL_STORE_DIR)
         except OSError as e:
             print("Error: %s : %s" % (MODEL_STORE_DIR, e.strerror))
+            sys.exit(1)
 
 mar_set = set()
 def gen_mar(gen_folder, model_store=None):
-    print(f"## Starting gen_mar: {model_store}\n")
+    #print(f"## Starting gen_mar: {model_store}\n")
     dirpath = os.path.dirname(model_store)
     if len(mar_set) == 0:
         mar_config = os.path.join(dirpath, 'mar_config.json')
@@ -32,7 +33,7 @@ def gen_mar(gen_folder, model_store=None):
         generate_mars(mar_config=mar_config, model_store_dir=model_store_dir)
 
     if model_store is not None and os.path.exists(model_store):
-        print("## Create symlink for mar files\n")
+        #print("## Create symlink for mar files\n")
         for mar_file in mar_set:
             src = f"{model_store_dir}/{mar_file}"
             dst = f"{model_store}/{mar_file}"
@@ -41,7 +42,7 @@ def gen_mar(gen_folder, model_store=None):
                 rm_file(dst)
 
             os.symlink(src, dst)
-            print(f"## Symlink {src}, {dst} successfully.")
+            #print(f"## Symlink {src}, {dst} successfully.")
 
 
 def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_DIR):
@@ -58,7 +59,7 @@ def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_D
     - "extra_files": the paths of extra files
     Note: To generate .pt file, "serialized_file_remote" and "gen_scripted_file_path" must be provided
     """
-    print(f"## Starting generate_mars, mar_config:{mar_config}, model_store_dir:{model_store_dir}\n")
+    #print(f"## Starting generate_mars, mar_config:{mar_config}, model_store_dir:{model_store_dir}\n")
     mar_set.clear()
     cwd = os.getcwd()
     os.chdir(os.path.dirname(mar_config))
@@ -119,6 +120,7 @@ def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_D
                 mar_set.add(marfile)
             except subprocess.CalledProcessError as exc:
                 print("## {} creation failed !, error: {}\n".format(model["model_name"], exc))
+                sys.exit(1)
 
             if model.get("serialized_file_remote") and \
                     model["serialized_file_remote"] and \

@@ -1,7 +1,6 @@
 from utils.inference_utils import get_inference
 from utils.shell_utils import rm_dir, rm_file
 from utils import tsutils as ts
-from utils import marsgen as mg
 import os
 import argparse
 

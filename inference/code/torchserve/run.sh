@@ -41,6 +41,9 @@ then
    helpFunction
 fi
 
+# TorchServe Default Handler for image classification
+ts_default_handler="image_classifier"
+
 function validate_file_path() {
     file=$1
     if [ ! -f "$file" ]
@@ -54,25 +57,30 @@ function validate_all_params() {
     validate_file_path $model_file_path
     validate_file_path $model_arch_path
     validate_file_path $classes
-    if [ ! "$handler_path" = "image_classifier" ]; then
+    if [ ! "$handler_path" = "$ts_default_handler" ]; then
         validate_file_path $handler_path
     fi
 }
 
 function get_value() {
-    item=$1
-    out=$(python3 -c "import json,sys;f=open('$wdir/models/models.json');obj=json.load(f);print(obj['$model_name'].get('$item', '#'));")
-    if [ "$out" = "#" ]; then
-        echo "$item - value is not present in the under the provided model in the models json";
-        helpFunction        
-    fi
+    name=$1
+    item=$2
+    echo "$(python3 $wdir/utils/shell_utils.py --function load_item_from_json --params $name,$item)"
+}
 
-    echo "$out"
+function check_value() {
+    param=$1
+    item=$2
+    if [ -z "$item" ] || [ "$item" = '#' ]; then
+        echo "$param - value is not present in the under the provided model in the models json";
+        helpFunction  
+    fi
 }
 
 function set_default_params() {
     if [ -z "$model_file_path" ] ; then
-        weights=$(get_value "weights")
+        weights=$(get_value $model_name "weights")
+        check_value weights $weights
         python3 $wdir/create_model_pt_file.py --model_name $model_name --weight $weights
         filename=$model_name'-default.pt'
         mv $wdir/$filename $wdir/utils/gen/$filename
@@ -81,21 +89,24 @@ function set_default_params() {
     fi
 
     if [ -z "$model_arch_path" ] ; then
-        res=$(get_value "model_arch_file")
+        res=$(get_value $model_name "model_arch_file")
+        check_value model_arch_file $res
         model_arch_path=$wdir'/models/'$model_name'/'$res
     fi
 
     if [ -z "$classes" ] ; then
-        res=$(get_value "class_map")
+        res=$(get_value $model_name "class_map")
+        check_value class_map $res
         classes=$wdir'/models/'$model_name'/'$res
     fi
 
     if [ -z "$handler_path" ] ; then
-        res=$(get_value "handler")
-        if [ ! "$res" = "image_classifier" ]; then
+        res=$(get_value $model_name "handler")
+        check_value handler $res
+        if [ ! "$res" = "$ts_default_handler" ]; then
             handler_path=$wdir'/models/'$model_name'/'$res
         else
-            handler_path='image_classifier'
+            handler_path=$ts_default_handler
         fi
     fi
 
@@ -105,15 +116,11 @@ function set_default_params() {
 }
 
 gen_folder="gen"
-mkdir $wdir/utils/$gen_folder
+mkdir -p $wdir/utils/$gen_folder
 if [ -z "$model_file_path" ] || [ -z "$model_arch_path" ] || [ -z "$classes" ] || [ -z "$handler_path" ]
 then
     echo "Some params are not provided, try using default params"
-    out=$(python3 -c "import json,sys;f=open('$wdir/models/models.json');obj=json.load(f);print(obj.get('$model_name', '#'));")
-    if [ "$out" = "#" ]; then
-        echo "$model_name is not present in the default models json";
-        helpFunction
-    fi
+    check_value "$model_name - key," $(get_value $model_name)
     set_default_params
 fi
 

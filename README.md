@@ -177,9 +177,9 @@ Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOL
 ```
 
 - Run Inference on the existing standard resnet50 model provided in this repo.
-Set the name and data folder parameter as required. "-k" keeps the torchserve server alive and needs to be stopped explicitly
+Set the name and data folder parameter as required.
 ```
-bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -k
+bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data
 ```
 
 - Run Inference on the trained resnet50 model that was generated using the training code provided in this repo.
@@ -203,7 +203,7 @@ Should print "Inference Run Successful" as a message at the end
 ```
 models/
     -custom100
-        - model.pt
+        - model.pt   // custom saved model can be stored in any location. Provide absolute path during cmd execution
         - arch.py
         - handler.py
         - class_map.json
