@@ -1,0 +1,14 @@
+{
+    "resnet50": {
+        "weights": "ResNet50_Weights.DEFAULT", 
+        "model_arch_file": "resnet50_arch.py",
+        "handler": "image_classifier",
+        "class_map": "index_to_name.json"
+    },
+    "densenet161": {
+        "weights": "DenseNet161_Weights.DEFAULT",
+        "model_arch_file": "densenet161_arch.py",
+        "handler": "image_classifier",
+        "class_map": "index_to_name.json"
+    }
+}

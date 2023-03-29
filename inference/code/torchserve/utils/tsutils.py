@@ -19,9 +19,9 @@ torch_model_archiver_command = {
 
 def start_torchserve(gen_folder,
         ncs=False, model_store="model_store", workflow_store="",
-        models="", config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0):
+        models="", config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0, debug=False):
     if gen_mar:
-        mg.gen_mar(gen_folder, model_store)
+        mg.gen_mar(gen_folder, model_store, debug)
     print("## Starting TorchServe \n")
     cmd = f"TS_NUMBER_OF_GPU={gpus} {torchserve_command[platform.system()]} --start --ncs --model-store={model_store}"
     if models:
@@ -36,21 +36,20 @@ def start_torchserve(gen_folder,
         print(f"## Console logs redirected to file: {log_file} \n")
         dirpath = os.path.dirname(log_file)
         cmd += f" >> {os.path.join(dirpath,log_file)}"
-    print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
+    debug and print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
     status = os.system(cmd)
     if status == 0:
         print("## Successfully started TorchServe \n")
         time.sleep(wait_for)
         return True
     else:
-        print("## TorchServe failed to start ! \n")
+        print("## TorchServe failed to start ! Make sure it's not running already\n")
         return False
 
 
 def stop_torchserve(wait_for=10):
     print("## Stopping TorchServe \n")
     cmd = f"{torchserve_command[platform.system()]} --stop"
-    print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
     status = os.system(cmd)
     if status == 0:
         print("## Successfully stopped TorchServe \n")
@@ -63,7 +62,7 @@ def stop_torchserve(wait_for=10):
 
 # Takes model name and mar name from model zoo as input
 def register_model(model_name, protocol="http", host="localhost", port="8081"):
-    print(f"## Registering {model_name} model \n")
+    print(f"\n## Registering {model_name} model \n")
     marfile = f"{model_name}.mar"
     params = (
         ("model_name", model_name),

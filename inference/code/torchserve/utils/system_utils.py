@@ -14,7 +14,13 @@ nvidia_smi_cmd = {
 
 
 def is_gpu_instance():
-    return True if os.system(nvidia_smi_cmd[platform.system()]) == 0 else False
+    try:
+        subprocess.check_output(nvidia_smi_cmd[platform.system()])
+        print('\n## Nvidia GPU detected!')
+        return True
+    except Exception: 
+        print('\n## No Nvidia GPU in system!')
+        return False
 
 
 def is_conda_build_env():
