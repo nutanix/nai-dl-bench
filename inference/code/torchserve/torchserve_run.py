@@ -9,7 +9,7 @@ def torchserve_run(args):
     try:
         # Run Inference
         get_inference(args.model_name, args.model_path, args.handler_path, args.classes, args.data, 
-            args.model_arch_path, args.extra_files, args.gpus, args.gen_folder_name, args.gen_mar)
+            args.model_arch_path, args.extra_files, args.gpus, args.gen_folder_name, args.gen_mar, args.debug_mode)
 
         print(f"\n**************************************")
         print(f"*\n*\n*  Inference Run Successful  ")
@@ -65,6 +65,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--ts_cleanup', type=int, default=1, 
                         metavar='cleanup', help='clean up torchserve temp files after run completion')
+
+    parser.add_argument('--debug_mode', type=int, default=0, 
+                        metavar='debug', help='run debug mode')
 
     args = parser.parse_args()
     torchserve_run(args)

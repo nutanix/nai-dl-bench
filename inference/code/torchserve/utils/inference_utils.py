@@ -19,7 +19,7 @@ def error_msg_print():
 
 
 def get_inference(model_name, model_path, handler_path, index_file_path, input_path, 
-    model_arch_path, extra_files, gpus, gen_folder, gen_mar):
+    model_arch_path, extra_files, gpus, gen_folder, gen_mar, debug=False):
 
     try:
         dirpath = os.path.dirname(__file__)
@@ -39,42 +39,42 @@ def get_inference(model_name, model_path, handler_path, index_file_path, input_p
         init_json = [init_json]
         inputs = [os.path.join(input_path, item) for item in os.listdir(input_path)]
 
-        print("\n",init_json, "\n")
+        debug and print("\n",init_json, "\n")
         with open(os.path.join(dirpath, gen_folder, 'mar_config.json'), 'w') as f:
             json.dump(init_json, f)
             handler = init_json[0]["handler"]
 
-        resnet50_model = {
+        inference_model = {
             "name": model_name,
             "inputs": inputs,
             "handler": handler,
         }
 
         models_to_validate = [
-            resnet50_model
+            inference_model
         ]
 
         ts_log_file = os.path.join(dirpath, gen_folder, "logs/ts_console.log")
         ts_log_config = os.path.join(dirpath, "../log4j2.xml")
         ts_config_file = os.path.join(dirpath, '../config.properties')
         ts_model_store = os.path.join(dirpath, gen_folder, "model_store")
-        is_gpu_instance = system_utils.is_gpu_instance()
 
         os.makedirs(os.path.join(dirpath, gen_folder, "model_store"), exist_ok=True)
         os.makedirs(os.path.join(dirpath, gen_folder, "logs"), exist_ok=True)
 
-        if gpus > 0 and is_gpu_instance:
+        if gpus > 0 and system_utils.is_gpu_instance():
             import torch
 
             if not torch.cuda.is_available():
                 sys.exit("## Ohh its NOT running on GPU ! \n")
+            print(f'\n## Running on {gpus} GPU(s) \n')
         
         else:
             print('\n## Running on CPU \n')
             gpus=0
         
         started = ts.start_torchserve(gen_folder, model_store=ts_model_store, log_file=ts_log_file, 
-            log_config_file=ts_log_config, config_file=ts_config_file, gpus=gpus, gen_mar=gen_mar)
+            log_config_file=ts_log_config, config_file=ts_config_file, gpus=gpus, gen_mar=gen_mar, debug=debug)
         if not started:
             error_msg_print()
             sys.exit(1)
@@ -107,7 +107,7 @@ def get_inference(model_name, model_path, handler_path, index_file_path, input_p
                     error_msg_print()
                     sys.exit(1)
 
-            if model != resnet50_model:
+            if model != inference_model:
                 response = ts.unregister_model(model_name)
                 if response and response.status_code == 200:
                     print(f"## Successfully unregistered {model_name} \n")

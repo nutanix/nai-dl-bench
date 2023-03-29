@@ -19,9 +19,9 @@ torch_model_archiver_command = {
 
 def start_torchserve(gen_folder,
         ncs=False, model_store="model_store", workflow_store="",
-        models="", config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0):
+        models="", config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0, debug=False):
     if gen_mar:
-        mg.gen_mar(gen_folder, model_store)
+        mg.gen_mar(gen_folder, model_store, debug)
     print("## Starting TorchServe \n")
     cmd = f"TS_NUMBER_OF_GPU={gpus} {torchserve_command[platform.system()]} --start --ncs --model-store={model_store}"
     if models:
@@ -36,7 +36,7 @@ def start_torchserve(gen_folder,
         print(f"## Console logs redirected to file: {log_file} \n")
         dirpath = os.path.dirname(log_file)
         cmd += f" >> {os.path.join(dirpath,log_file)}"
-    print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
+    debug and print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
     status = os.system(cmd)
     if status == 0:
         print("## Successfully started TorchServe \n")

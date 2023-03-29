@@ -23,17 +23,17 @@ def delete_model_store_gen_dir():
             sys.exit(1)
 
 mar_set = set()
-def gen_mar(gen_folder, model_store=None):
-    #print(f"## Starting gen_mar: {model_store}\n")
+def gen_mar(gen_folder, model_store=None, debug=False):
+    debug and print(f"## Starting gen_mar: {model_store}\n")
     dirpath = os.path.dirname(model_store)
     if len(mar_set) == 0:
         mar_config = os.path.join(dirpath, 'mar_config.json')
         model_store_dir = os.path.join(dirpath, "model_store_gen")
         os.makedirs(model_store_dir, exist_ok=True)
-        generate_mars(mar_config=mar_config, model_store_dir=model_store_dir)
+        generate_mars(mar_config=mar_config, model_store_dir=model_store_dir, debug=debug)
 
     if model_store is not None and os.path.exists(model_store):
-        #print("## Create symlink for mar files\n")
+        debug and print("## Create symlink for mar files\n")
         for mar_file in mar_set:
             src = f"{model_store_dir}/{mar_file}"
             dst = f"{model_store}/{mar_file}"
@@ -42,10 +42,10 @@ def gen_mar(gen_folder, model_store=None):
                 rm_file(dst)
 
             os.symlink(src, dst)
-            #print(f"## Symlink {src}, {dst} successfully.")
+            debug and print(f"## Symlink {src}, {dst} successfully.")
 
 
-def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_DIR):
+def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_DIR, debug=False):
     """
     By default generate_mars reads ts_scripts/mar_config.json and outputs mar files in dir model_store_gen
     - mar_config.json defines a list of models' mar file parameters. They are:
@@ -59,7 +59,7 @@ def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_D
     - "extra_files": the paths of extra files
     Note: To generate .pt file, "serialized_file_remote" and "gen_scripted_file_path" must be provided
     """
-    #print(f"## Starting generate_mars, mar_config:{mar_config}, model_store_dir:{model_store_dir}\n")
+    debug and print(f"## Starting generate_mars, mar_config:{mar_config}, model_store_dir:{model_store_dir}\n")
     mar_set.clear()
     cwd = os.getcwd()
     os.chdir(os.path.dirname(mar_config))
@@ -112,7 +112,7 @@ def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_D
             cmd = model_archiver_command_builder(model["model_name"], model["version"], model_file_input,
                                                  serialized_file_path, handler, extra_files,
                                                  runtime, archive_format, requirements_file, export_path)
-            print(f"## In directory: {os.getcwd()} | Executing command: {cmd}\n")
+            debug and print(f"## In directory: {os.getcwd()} | Executing command: {cmd}\n")
             try:
                 subprocess.check_call(cmd, shell=True)
                 marfile = "{}.mar".format(model["model_name"])
