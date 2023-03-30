@@ -258,7 +258,7 @@ bash inference/code/torchserve/run.sh -a /home/ubuntu/custom50.mar
 }
 ```
 
-- make sure to provide the key as name in the command for "-n
+- make sure to provide the key as name in the command for "-n"
 ```
 bash inference/code/torchserve/run.sh -n custom200 -a /home/ubuntu/custom200.mar
 ```
