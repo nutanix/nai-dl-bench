@@ -93,7 +93,7 @@ def register_model(model_name, marfile, protocol="http", host="localhost", port=
     )
 
     url = f"{protocol}://{host}:{port}/models"
-    response = requests.post(url, params=tuple(params), verify=False)
+    response = requests.post(url, params=params, verify=False)
     return response
 
 

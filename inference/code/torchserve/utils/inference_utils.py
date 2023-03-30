@@ -42,6 +42,7 @@ def get_model_name(input_dict, modelUrl):
     
     print('\n model not found among registered models')
     error_msg_print()
+    sys.exit(1)
 
 def get_inference(model_name, model_path, handler_path, index_file_path, input_path, 
     model_arch_path, extra_files, gpus, gen_folder, gen_mar, mar_file, debug=False):
@@ -146,7 +147,7 @@ def get_inference(model_name, model_path, handler_path, index_file_path, input_p
                     error_msg_print()
                     sys.exit(1)
 
-            os.system(f"curl http://localhost:8081/models/{model_name}")
+            debug and os.system(f"curl http://localhost:8081/models/{model_name}")
             print(f"## {model_handler} Handler is stable. \n")
     except Exception as e:
         error_msg_print()
