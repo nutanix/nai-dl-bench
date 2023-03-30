@@ -4,6 +4,7 @@ import sys
 import time
 import requests
 import marsgen as mg
+import json
 
 torchserve_command = {
     "Windows": "torchserve.exe",
@@ -21,7 +22,7 @@ def start_torchserve(gen_folder,
         ncs=False, model_store="model_store", workflow_store="",
         models="", config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0, debug=False):
     if gen_mar:
-        mg.gen_mar(gen_folder, model_store, debug)
+        new_mar_file = mg.gen_mar(gen_folder, model_store, debug)
     print("## Starting TorchServe \n")
     cmd = f"TS_NUMBER_OF_GPU={gpus} {torchserve_command[platform.system()]} --start --ncs --model-store={model_store}"
     if models:
@@ -41,10 +42,10 @@ def start_torchserve(gen_folder,
     if status == 0:
         print("## Successfully started TorchServe \n")
         time.sleep(wait_for)
-        return True
+        return (True, new_mar_file if gen_mar else None)
     else:
         print("## TorchServe failed to start ! Make sure it's not running already\n")
-        return False
+        return (False, None)
 
 
 def stop_torchserve(wait_for=10):
@@ -61,17 +62,38 @@ def stop_torchserve(wait_for=10):
 
 
 # Takes model name and mar name from model zoo as input
-def register_model(model_name, protocol="http", host="localhost", port="8081"):
-    print(f"\n## Registering {model_name} model \n")
-    marfile = f"{model_name}.mar"
+def register_model(model_name, marfile, protocol="http", host="localhost", port="8081"):
+    print(f"\n## Registering {marfile} model \n")
+
+    dirpath = os.path.dirname(__file__)
+    initial_workers = batch_size = max_batch_delay = response_timeout = None
+
+    with open(os.path.join(dirpath, '../models/models.json'), 'r') as f:
+        model_config = json.loads(f.read())
+        if model_name in model_config:
+            if "initial_workers" in model_config[model_name]:
+                initial_workers = model_config[model_name]['initial_workers']
+
+            if "batch_size" in model_config[model_name]:
+                batch_size = model_config[model_name]['batch_size']
+
+            if "max_batch_delay" in model_config[model_name]:
+                max_batch_delay = model_config[model_name]['max_batch_delay']
+
+            if "response_timeout" in model_config[model_name]:
+                response_timeout = model_config[model_name]['response_timeout']
+
     params = (
-        ("model_name", model_name),
         ("url", marfile),
-        ("initial_workers", "1"),
+        ("initial_workers", initial_workers or 1),
+        ("batch_size", batch_size or 1),
+        ("max_batch_delay", max_batch_delay or 200),
+        ("response_timeout", response_timeout or 2000),
         ("synchronous", "true"),
     )
+
     url = f"{protocol}://{host}:{port}/models"
-    response = requests.post(url, params=params, verify=False)
+    response = requests.post(url, params=tuple(params), verify=False)
     return response
 
 
