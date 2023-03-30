@@ -163,7 +163,7 @@ run.sh is inside inference/code/torchserve folder
 
 command to run inference
 ```
-Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOLUTE_PATH> -f <MODEL_ARCH_FILE_ABSOLUTE_PATH> -c <CLASSES_MAPPING_ABSOLUTE_PATH> -h <HANDLER_FILE_ABSOLUTE_PATH> -e <EXTRA_FILES> -g <NUM_OF_GPUS> [OPTIONAL -k]
+Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOLUTE_PATH> -f <MODEL_ARCH_FILE_ABSOLUTE_PATH> -c <CLASSES_MAPPING_ABSOLUTE_PATH> -h <HANDLER_FILE_ABSOLUTE_PATH> -e <EXTRA_FILES> -g <NUM_OF_GPUS> -a <ABOSULTE_PATH_MODEL_ARCHIVE_FILE> [OPTIONAL -k]
 
 -n Name of the Model
 -d Absolute path to the inputs folder that contains data to be predicted.
@@ -173,6 +173,7 @@ Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOL
 -h Absolute path handler file
 -e Comma separated absolute paths of all the additional paths required by the model
 -g Number of gpus to be used to execute. Default will be 0, cpu used
+-a Absolute path to the model archive file (.mar)
 -k Keep the torchserve server alive after run completion. Default, stops the server if not set
 ```
 
@@ -230,4 +231,39 @@ models/
 bash inference/code/torchserve/run.sh -n custom100 -d /home/ubuntu/data -m models/custom100/model.pt
 ```
 
+##### Add custom models through mar files
 
+```
+bash inference/code/torchserve/run.sh -a /home/ubuntu/custom50.mar
+```
+
+##### Use custom parameters while registering the model
+
+- make an entry for this custom model in "models/models.json"
+
+```
+{
+    .
+    .
+    .
+    "custom200": {
+        .
+        .
+        .
+        "initial_workers": "4",
+        "batch_size": "16",
+        "max_batch_delay": "400",
+        "response_timeout": "2000"
+    }
+}
+```
+
+- make sure to provide the key as name in the command for "-n"
+```
+bash inference/code/torchserve/run.sh -n custom200 -a /home/ubuntu/custom200.mar
+```
+OR
+
+```
+bash inference/code/torchserve/run.sh -n custom200 -d /home/ubuntu/data -m models/custom200/model.pt
+```

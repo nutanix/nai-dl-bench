@@ -43,6 +43,7 @@ def gen_mar(gen_folder, model_store=None, debug=False):
 
             os.symlink(src, dst)
             debug and print(f"## Symlink {src}, {dst} successfully.")
+    return next(iter(mar_set))
 
 
 def generate_mars(mar_config=MAR_CONFIG_FILE_PATH, model_store_dir=MODEL_STORE_DIR, debug=False):
