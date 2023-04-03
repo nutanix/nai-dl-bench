@@ -206,7 +206,7 @@ bash inference/code/torchserve/run.sh -n resnet50
 bash inference/code/torchserve/run.sh -n fasterrcnn_resnet50_fpn
 ```
 
-- For running inference with data folder. Here the path should contain only files that are acceptable for inference/
+- For running inference with data folder. Here the path should contain only files that are acceptable for inference.
 
 ```
 bash inference/code/torchserve/run.sh -n resnet50 -d inference/data

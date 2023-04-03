@@ -141,8 +141,6 @@ def validate_inference_model(models_to_validate, input_mar, model_name, is_mar_g
 
         execute_inference_on_inputs(model_inputs, model_name)
 
-        unregister_model(model_name)
-
         debug and os.system(f"curl http://localhost:8081/models/{model_name}")
         print(f"## {model_handler} Handler is stable. \n")
 
