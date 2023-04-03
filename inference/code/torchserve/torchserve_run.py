@@ -127,9 +127,11 @@ def cleanup(gen_folder, ts_stop = True, ts_cleanup = True):
     if ts_stop:
         ts.stop_torchserve()
         dirpath = os.path.dirname(__file__)
+        # clean up the logs folder to reset logs before the next run
         rm_dir(os.path.join(dirpath, 'utils', gen_folder, 'logs'))
 
         if ts_cleanup:
+            # clean up the entire generate folder
             rm_dir(os.path.join(dirpath, 'utils', gen_folder))
 
 
