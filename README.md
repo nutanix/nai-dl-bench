@@ -1,6 +1,20 @@
 # nai-dl-bench
 
-**SETUP**
+### Table of Contents
+- **[TRAINING](#training)**<br>
+    - **[Setup](#setup)**<br>
+    - **[Training Run](#training-run)**<br>
+- **[INFERENCE](#inference)**<br>
+    - **[Setup TorchServe](#setup-torchserve)**<br>
+    - **[Start Torchserve Server](#start-torchserve-server)**<br>
+    - **[Automated Setup and Inference run](#automated-setup-and-inference-run)**<br>
+        - **[Inference run using default models](#inference-run-using-default-models)**<br>
+        - **[Inference run using custom trained models](#inference-run-using-custom-trained-models)**<br>
+        - **[Inference run using pre-existing MAR files](#inference-run-using-pre-existing-mar-files)**<br>
+
+## TRAINING
+
+### Setup
 
 MPIRun setup:
 
@@ -19,7 +33,7 @@ ssh-copy-id -i /home/ubuntu/.ssh/id_rsa <username>@<worker node ip>
 - Dataset has to be accessible from all nodes eg: NFS
 - Absolute path of the dataset and training code need to be the same across all nodes
 
-**TRAINING**
+### Training Run
 
 To start multi node training, use the following command
 
@@ -66,7 +80,7 @@ cd inference/code/torchserve
 pip install -r requirements.txt
 ```
 
-### Create .mar file for resnet50
+##### Create .mar file for resnet50
 
 Generate new resnet-50.pt using the eager mode 
 
@@ -177,17 +191,34 @@ Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOL
 -k Keep the torchserve server alive after run completion. Default, stops the server if not set
 ```
 
-- Run Inference on the existing standard resnet50 model provided in this repo.
-Set the name and data folder parameter as required.
+Inference run should print "Inference Run Successful" as a message at the end.
+
+##### Inference run using default models
+
+- Run Inference on the existing standard resnet50/densenet161/fasterrcnn_resnet50_fpn model provided in this repo.
+Set the name parameter as required.
+
 ```
-bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data
+bash inference/code/torchserve/run.sh -n resnet50
+```
+
+```
+bash inference/code/torchserve/run.sh -n fasterrcnn_resnet50_fpn
+```
+
+- For running inference with data folder. Here the path should contain only files that are acceptable for inference/
+
+```
+bash inference/code/torchserve/run.sh -n resnet50 -d inference/data
 ```
 
 - Run Inference on the trained resnet50 model that was generated using the training code provided in this repo.
-Set the name and data folder parameter as required and for GPU to be used set "-g <num>"
+
 ```
-bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -m resnet50.pt -g 1
+bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -m resnet50.pt
 ```
+
+##### Inference run using custom trained models
 
 - Run Inference on the custom model of your choice.
 Make sure to set all the parameters as shown in the example
@@ -195,15 +226,12 @@ Make sure to set all the parameters as shown in the example
 bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -m /home/ubuntu/model/resnet50.pt -f /home/ubuntu/model/model.py -c /home/ubuntu/index_to_name.json -h image_classifier -e /home/gavrishdemo/test/resnet50.py -g 2
 ```
 
-Should print "Inference Run Successful" as a message at the end
-
-##### Add custom models as default
-
-- create a folder inside "models" folder with the name of the model and add all the required files
+- Custom trained model can be added as a default option
+- Create a folder inside "models" folder with the name of the model and add all the required files
 
 ```
 models/
-    -custom100
+    -custom100/
         - model.pt   // custom saved model can be stored in any location. Provide absolute path during cmd execution
         - arch.py
         - handler.py
@@ -231,15 +259,18 @@ models/
 bash inference/code/torchserve/run.sh -n custom100 -d /home/ubuntu/data -m models/custom100/model.pt
 ```
 
-##### Add custom models through mar files
+##### Inference run using pre-existing MAR files
+
+- Run inference using custom created mar files directly
 
 ```
-bash inference/code/torchserve/run.sh -a /home/ubuntu/custom50.mar
+bash inference/code/torchserve/run.sh -a /home/ubuntu/custom50.mar -d inference/data
 ```
 
-##### Use custom parameters while registering the model
+### Fine tune params for better performance
 
-- make an entry for this custom model in "models/models.json"
+- Default parameters can be overidden to get better performance out of the registered model
+- make an entry for the model in "models/models.json"
 
 ```
 {
