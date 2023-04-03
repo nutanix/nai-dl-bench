@@ -107,7 +107,7 @@ def run_inference(args):
 def torchserve_run(args):
     try:
         # Stop the server if anything is running
-        ts.stop_torchserve()
+        cleanup(args.gen_folder_name, True, False)
 
         # data folder exists check
         if(args.data):
@@ -126,9 +126,10 @@ def torchserve_run(args):
 def cleanup(gen_folder, ts_stop = True, ts_cleanup = True):
     if ts_stop:
         ts.stop_torchserve()
-    
+        dirpath = os.path.dirname(__file__)
+        rm_dir(os.path.join(dirpath, 'utils', gen_folder, 'logs'))
+
         if ts_cleanup:
-            dirpath = os.path.dirname(__file__)
             rm_dir(os.path.join(dirpath, 'utils', gen_folder))
 
 
