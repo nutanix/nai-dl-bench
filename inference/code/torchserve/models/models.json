@@ -10,5 +10,11 @@
         "model_arch_file": "densenet161_arch.py",
         "handler": "image_classifier",
         "class_map": "index_to_name.json"
+    },
+    "fasterrcnn_resnet50_fpn": {
+	"weights": "FasterRCNN_ResNet50_FPN_Weights.DEFAULT",
+	"model_arch_file": "fasterrcnn_resnet50_fpn_arch.py",
+	"handler": "object_detector",
+	"class_map": "index_to_name.json"
     }
 }
