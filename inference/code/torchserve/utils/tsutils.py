@@ -18,12 +18,7 @@ torch_model_archiver_command = {
         "Linux": "torch-model-archiver"
     }
 
-def start_torchserve(gen_folder,
-        ncs=False, model_store="model_store", workflow_store="",
-        models="", config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0, debug=False):
-    if gen_mar:
-        new_mar_file = mg.gen_mar(gen_folder, model_store, debug)
-    print("## Starting TorchServe \n")
+def generate_ts_start_cmd(ncs, model_store, models, config_file, log_file, log_config_file, gpus, debug):
     cmd = f"TS_NUMBER_OF_GPU={gpus} {torchserve_command[platform.system()]} --start --ncs --model-store={model_store}"
     if models:
         cmd += f" --models={models}"
@@ -38,6 +33,15 @@ def start_torchserve(gen_folder,
         dirpath = os.path.dirname(log_file)
         cmd += f" >> {os.path.join(dirpath,log_file)}"
     debug and print(f"## In directory: {os.getcwd()} | Executing command: {cmd} \n")
+    return cmd
+
+
+def start_torchserve(gen_folder, ncs=False, model_store="model_store", models="", 
+        config_file="", log_file="", log_config_file="", wait_for=10, gen_mar=True, gpus=0, debug=False):
+    if gen_mar:
+        new_mar_file = mg.gen_mar(gen_folder, model_store, debug)
+    print("## Starting TorchServe \n")
+    cmd = generate_ts_start_cmd(ncs, model_store, models, config_file, log_file, log_config_file, gpus, debug)
     status = os.system(cmd)
     if status == 0:
         print("## Successfully started TorchServe \n")
@@ -49,6 +53,11 @@ def start_torchserve(gen_folder,
 
 
 def stop_torchserve(wait_for=10):
+    try:
+        requests.get('http://localhost:8080/ping')
+    except Exception as e:
+        return
+
     print("## Stopping TorchServe \n")
     cmd = f"{torchserve_command[platform.system()]} --stop"
     status = os.system(cmd)
@@ -61,13 +70,9 @@ def stop_torchserve(wait_for=10):
         return False
 
 
-# Takes model name and mar name from model zoo as input
-def register_model(model_name, marfile, protocol="http", host="localhost", port="8081"):
-    print(f"\n## Registering {marfile} model \n")
-
+def get_params_for_registration(model_name):
     dirpath = os.path.dirname(__file__)
     initial_workers = batch_size = max_batch_delay = response_timeout = None
-
     with open(os.path.join(dirpath, '../models/models.json'), 'r') as f:
         model_config = json.loads(f.read())
         if model_name in model_config:
@@ -82,6 +87,13 @@ def register_model(model_name, marfile, protocol="http", host="localhost", port=
 
             if "response_timeout" in model_config[model_name]:
                 response_timeout = model_config[model_name]['response_timeout']
+
+    return initial_workers, batch_size, max_batch_delay, response_timeout
+
+
+def register_model(model_name, marfile, protocol="http", host="localhost", port="8081"):
+    print(f"\n## Registering {marfile} model \n")
+    initial_workers, batch_size, max_batch_delay, response_timeout = get_params_for_registration(model_name)
 
     params = (
         ("url", marfile),
