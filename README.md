@@ -80,7 +80,7 @@ cd inference/code/torchserve
 pip install -r requirements.txt
 ```
 
-##### Create .mar file for resnet50
+#### Create .mar file for resnet50
 
 Generate new resnet-50.pt using the eager mode 
 
@@ -193,7 +193,7 @@ Usage: bash run.sh -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOL
 
 Inference run should print "Inference Run Successful" as a message at the end.
 
-##### Inference run using default models
+#### Inference run using default models
 
 - Run Inference on the existing standard resnet50/densenet161/fasterrcnn_resnet50_fpn model provided in this repo.
 Set the name parameter as required.
@@ -218,7 +218,7 @@ bash inference/code/torchserve/run.sh -n resnet50 -d inference/data
 bash inference/code/torchserve/run.sh -n resnet50 -d /home/ubuntu/data -m resnet50.pt
 ```
 
-##### Inference run using custom trained models
+#### Inference run using custom trained models
 
 - Run Inference on the custom model of your choice.
 Make sure to set all the parameters as shown in the example
@@ -259,7 +259,7 @@ models/
 bash inference/code/torchserve/run.sh -n custom100 -d /home/ubuntu/data -m models/custom100/model.pt
 ```
 
-##### Inference run using pre-existing MAR files
+#### Inference run using pre-existing MAR files
 
 - Run inference using custom created mar files directly
 

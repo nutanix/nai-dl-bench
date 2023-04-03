@@ -11,7 +11,6 @@ import time
 import json
 import subprocess
 import requests
-import inference_data_model
 import traceback
 
 def error_msg_print():

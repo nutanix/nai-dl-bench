@@ -80,7 +80,7 @@ def run_inference_with_mar(args):
 
 def run_inference_with_custom_params(args):
     data_model = dm.set_data_model(args.data, args.gpus, args.gen_folder_name, args.model_name, args.model_path, args.handler_path, args.classes,  
-        args.model_arch_path, args.extra_files, args.mar)
+        args.model_arch_path, args.extra_files)
     
     if(not args.model_path or not args.model_arch_path or not args.classes or not args.handler_path):
         set_default_values(data_model, args.model_name, args.model_path, args.model_arch_path, args.classes, args.handler_path, args.gen_folder_name)
@@ -89,6 +89,9 @@ def run_inference_with_custom_params(args):
 
 
 def run_inference(args):
+    # validate gen folder
+    check_if_path_exists(os.path.join(os.path.dirname(__file__), 'utils', args.gen_folder_name))
+
     if(args.mar):
         run_inference_with_mar(args)
 
