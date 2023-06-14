@@ -1,0 +1,95 @@
+name: Run Shell Script on Code Push
+
+on:
+ pull_request:
+    branches:
+      - main
+jobs:
+  vm_training:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: python installations and install openmpi
+        run: pip3 install -r  training/code/requirements.txt; sudo apt install openmpi-bin
+
+      - name: make directory for images and untar data
+        run: mkdir training/data/images; tar -xvf training/data/training_images.tar -C training/data/images
+
+      - name: create output directory and run training Script
+        run: ip_address=$(hostname -I | awk '{print $1}'); echo "IP Address- $ip_address"; mkdir -p ~/training/output; bash training/code/run.sh -e vm -n 1 -h $ip_address -m $ip_address  -c "python3 training.py --data-folder $PWD/training/data/images --output-folder ~/training/output" -cpuOnly
+  
+  docker_training:
+      runs-on: ubuntu-latest
+
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: update apt package and add docker's official gpg key Setup docker repository
+        run: sudo apt-get update; sudo apt-get install ca-certificates curl gnupg; sudo install -m 0755 -d /etc/apt/keyrings; curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; sudo chmod a+r /etc/apt/keyrings/docker.gpg; 
+
+      - name: set up docker repo
+        run: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+      - name: Install docker engine
+        run: sudo apt-get update; sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+      - name: make directory for input and output images and untar data
+        run: mkdir training/data/images; mkdir training/data/output; tar -xvf training/data/training_images.tar -C training/data/images
+      
+      - name: Build docker image
+        run: docker build -t test_image -f training/Dockerfile training/code
+
+      - name: run training Script
+        run: bash training/code/run.sh -e docker  -c "python3 training.py --data-folder $PWD/training/data/images --output-folder $PWD/training/data/output" -i test_image -r "--gpu 0 --cpu 1 --mem 2g --shm 100000000" 
+
+  k8s_training:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+
+        - name: update apt package and add docker's official gpg key Setup docker repository
+          run: sudo apt-get update; sudo apt-get install ca-certificates curl gnupg; sudo install -m 0755 -d /etc/apt/keyrings; curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; sudo chmod a+r /etc/apt/keyrings/docker.gpg; 
+
+        - name: set up docker repo
+          run: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        - name: Install docker engine
+          run: sudo apt-get update; sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+        - name: Create k8s Kind Cluster
+          uses: container-tools/kind-action@v1
+          with:
+            cluster_name: training-cluster
+
+        - name: install kubectl and helm
+          run: sudo snap install kubectl --classic ; sudo snap install helm --classic
+        
+        - name: install training operator on cluster
+          run: kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.5.0"
+
+        - name: python library installations
+          run: pip3 install -r training/code/requirements.txt;
+
+        - name: make directory for images and untar data
+          run: echo $PWD ; mkdir training/data/images; tar -xvf training/data/training_images.tar -C training/data/images;
+        
+        - name: create storage class, pv and pvc
+          run: kubectl apply -f training/code/utils/storageclass.yaml; kubectl apply -f training/code/utils/pv.yaml; kubectl apply -f training/code/utils/pvc.yaml; sleep 20;  kubectl get pvc ; kubectl describe pvc output-pvc; kubectl describe pvc input-pvc
+
+        - name: Build docker image and push to local registry
+          run: docker build -t test_image:latest -f training/Dockerfile training/code; docker push test_image:latest
+
+        # - name: export KUBECONFIG and start kubernetes training
+        #   run: |
+        #     sudo rm -rf /usr/share/dotnet
+        #     sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        #     export KUBECONFIG=~/.kube/config
+        #     bash training/code/run.sh -e k8s -n 1 -c 'python3 training.py --data-folder input-pvc:/home/runner/work/nai-dl-bench/nai-dl-bench/training/data/images --output-folder output-pvc:/tmp' -i test_image:latest -r "--gpu 0 --cpu 500m --mem 1Gi --shm 1Gi" 
+
+
+    

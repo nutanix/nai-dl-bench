@@ -18,7 +18,7 @@ from multiprocessing import Array
 from multiprocessing.managers import SyncManager
 from torchvision import models
 
-global_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
+global_rank = int(os.environ["OMPI_COMM_WORLD_RANK"]) if "OMPI_COMM_WORLD_RANK" in os.environ  else int(os.environ["RANK"])
 
 def set_random_seeds(random_seed=0):
     # pytorch random number generator is made deterministic
@@ -34,13 +34,16 @@ def set_random_seeds(random_seed=0):
 
 
 def init_backend_processes(backend):
-    world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
-    dist.init_process_group(rank = global_rank, world_size=world_size ,backend="nccl", timeout=timedelta(seconds=15))
+    world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"]) if "OMPI_COMM_WORLD_SIZE" in os.environ  else int(os.environ["WORLD_SIZE"])
+    if torch.cuda.is_available():
+        dist.init_process_group(rank = global_rank, world_size=world_size ,backend="nccl", timeout=timedelta(seconds=15))
+    else:
+        dist.init_process_group(rank = global_rank, world_size=world_size ,backend="gloo", timeout=timedelta(seconds=15))
+
 
 def train(argv):
-    global_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
-    print(f"\nTRAINING STARTED ON THE NODE - {global_rank}")
-    local_rank = int(os.environ["OMPI_COMM_WORLD_LOCAL_RANK"])
+    global_rank = int(os.environ["OMPI_COMM_WORLD_RANK"]) if "OMPI_COMM_WORLD_RANK" in os.environ  else int(os.environ["RANK"])
+    local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK']) if 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ else (int(os.environ["LOCAL_RANK"]) if "LOCAL_RANK" in os.environ else 0)
     num_epochs = argv.num_epochs
     batch_size = argv.batch_size
     learning_rate = argv.learning_rate
@@ -83,10 +86,15 @@ def train(argv):
     else:
         raise AssertionError("Wrong resnet type")
 
-    ddp_model = nn.parallel.DistributedDataParallel(
-        model, device_ids=[local_rank], output_device=local_rank)
+    if torch.cuda.is_available():
+        ddp_model = nn.parallel.DistributedDataParallel(
+            model, device_ids=[local_rank], output_device=local_rank)
+    else:
+        ddp_model = nn.parallel.DistributedDataParallel(
+            model, device_ids=None, output_device=None)
+
     train_sampler = DistributedSampler(dataset=train_dataset)
-    train_dl = dl(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=workers, multiprocessing_context="spawn", prefetch_factor=pf, pin_memory=True) 
+    train_dl = dl(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=workers, prefetch_factor=pf, pin_memory=True)
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -142,21 +150,13 @@ if __name__ == '__main__':
                                      dist.Backend.NCCL, dist.Backend.MPI],
                             default=dist.Backend.NCCL)
     argv = parser.parse_args()
-
+    print("ARGUMENTS",argv)
     Path(argv.output_folder).mkdir(parents=True, exist_ok=True)
     dataset_dir = os.listdir(argv.data_folder)
     # Checking if dataset is empty or not
     if len(dataset_dir) == 0:
         print("Empty dataset directory")
-        sys.exit()
-
-    multiprocessing.set_start_method("spawn")
-    manager = SyncManager()
-    manager.start()
-    t1 = multiprocessing.Process(target=train,args=(argv,))
-    t1.start()
-    t1.join()
-    print(f"\nSUCCESSFULLY COMPLETED TRAINING ON NOOE - {global_rank}")
-
-    manager.shutdown()
+        sys.exit(1)
+    train(argv)
+    print(f"\nSUCCESSFULLY COMPLETED TRAINING ON NODE - {global_rank}")
     sys.exit()

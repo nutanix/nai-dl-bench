@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: input-pv
+spec:
+  capacity:
+    storage: 100Mi
+  volumeMode: Filesystem
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /home/runner/work/nai-dl-bench/nai-dl-bench/training/data/images
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: output-pv
+spec:
+  capacity:
+    storage: 200Mi
+  volumeMode: Filesystem
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /tmp
