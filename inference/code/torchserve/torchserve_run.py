@@ -1,7 +1,7 @@
 from utils.inference_utils import get_inference, get_inference_with_mar, error_msg_print
 from utils.shell_utils import rm_dir, rm_file
 from utils import tsutils as ts
-from utils.system_utils import check_if_path_exists
+from utils.system_utils import check_if_path_exists, create_folder_if_not_exits
 import os
 import argparse
 import json
@@ -90,7 +90,7 @@ def run_inference_with_custom_params(args):
 
 def run_inference(args):
     # validate gen folder
-    check_if_path_exists(os.path.join(os.path.dirname(__file__), 'utils', args.gen_folder_name))
+    create_folder_if_not_exits(os.path.join(os.path.dirname(__file__), 'utils', args.gen_folder_name))
 
     if(args.mar):
         run_inference_with_mar(args)

@@ -6,6 +6,9 @@ helpFunction()
 {
    echo ""
    echo "Usage: $0 -n <MODEL_NAME> -d <INPUT_DATA_ABSOLUTE_PATH> -m <MODEL_ABSOLUTE_PATH> -f <MODEL_ARCH_FILE_ABSOLUTE_PATH> -c <CLASSES_MAPPING_ABSOLUTE_PATH> -h <HANDLER_FILE_ABSOLUTE_PATH> -e <EXTRA_FILES> -g <NUM_OF_GPUS> -a <ABOSULTE_PATH_MODEL_ARCHIVE_FILE>"
+   echo -e "\t-o Choice of compute infra to be run on"
+   echo -e "\t-i Container Image"
+   echo -e "\t-r resorces to be provided to the container in quotes '--cpu <cpu to be used> --mem <memory in GBs to be provided to the container>'. Ex: -r '--cpu 16 --mem 24'"
    echo -e "\t-n Name of the Model"
    echo -e "\t-d Absolute path to the inputs folder that contains data to be predicted."
    echo -e "\t-m Absolute path to the saved model file"
@@ -19,9 +22,12 @@ helpFunction()
    exit 1 # Exit script after printing help
 }
 
-while getopts ":kn:d:m:f:c:h:e:g:a:" opt
+while getopts ":kn:d:m:f:c:h:e:g:a:o:i:r:" opt
 do
    case "$opt" in
+        o ) compute_choice="$OPTARG" ;;
+        i ) image="$OPTARG" ;;
+        r ) resources="$OPTARG" ;;
         n ) model_name="$OPTARG" ;;
         d ) data="$OPTARG" ;;
         m ) model_file_path="$OPTARG" ;;
@@ -36,55 +42,178 @@ do
    esac
 done
 
-gen_folder="gen"
-mkdir -p $wdir/utils/$gen_folder
-cmd="python3 $wdir/torchserve_run.py --gen_folder_name $gen_folder"
+function validate_and_get_resources(){
+    # Split the string into an array of arguments
+    IFS=" " read -r -a res_array <<< "$resources"
 
-if [ ! -z $model_name ] ; then
-    cmd+=" --model_name $model_name"
-fi
-
-if [ ! -z $mar_file_path ] ; then
-    cmd+=" --mar $mar_file_path"
-fi
-
-if [ ! -z $model_file_path ] ; then
-    cmd+=" --model_path $model_file_path"
-fi
-
-if [ ! -z $model_arch_path ] ; then
-    cmd+=" --model_arch_path $model_arch_path"
-fi
-
-if [ ! -z $classes ] ; then
-    cmd+=" --classes $classes"
-fi
-
-if [ ! -z $handler_path ] ; then
-    cmd+=" --handler_path $handler_path"
-fi
-
-if [ -z "$gpus" ] ; then
-    gpus=0
-else
-    sys_gpus=$(nvidia-smi --list-gpus | wc -l)
-    if [ "$gpus" -gt "$sys_gpus" ]; then
-        echo "Machine has fewer GPUs ($sys_gpus) then input provided - $gpus";
-        helpFunction  
+    for ((i=0; i<${#res_array[@]}; i++)); 
+    do
+    if [[ ${res_array[i]} == "--cpu" ]]; then
+        # Get the value from the next index
+        cpu=${res_array[i+1]}
     fi
+    if [[ ${res_array[i]} == "--mem" ]]; then
+        # Get the value from the next index
+        mem=${res_array[i+1]}
+    fi
+    done
+
+    if [ -z "$image"  ]
+    then
+        echo "Image not provided for creating container";
+        helpFunction
+    fi
+
+    if [ -z "$mem"  ] ||  [ -z "$cpu"  ]
+    then
+        echo "memory or cpu resource params have not been set";
+        helpFunction
+    fi
+}
+
+function create_execution_cmd()
+{
+    gen_folder="gen"
+    if [ $compute_choice = "vm" ] ;
+    then
+        cmd="python3 $wdir/torchserve_run.py"
+    else
+        cmd="python3 code/torchserve/torchserve_run.py"
+    fi
+    
+    cmd+=" --gen_folder_name $gen_folder"
+
+    if [ ! -z $model_name ] ; then
+        cmd+=" --model_name $model_name"
+    fi
+
+    if [ ! -z $mar_file_path ] ; then
+        cmd+=" --mar $mar_file_path"
+    fi
+
+    if [ ! -z $model_file_path ] ; then
+        cmd+=" --model_path $model_file_path"
+    fi
+
+    if [ ! -z $model_arch_path ] ; then
+        cmd+=" --model_arch_path $model_arch_path"
+    fi
+
+    if [ ! -z $classes ] ; then
+        cmd+=" --classes $classes"
+    fi
+
+    if [ ! -z $handler_path ] ; then
+        cmd+=" --handler_path $handler_path"
+    fi
+
+    if [ -z "$gpus" ] ; then
+        gpus=0
+    else
+        sys_gpus=$(nvidia-smi --list-gpus | wc -l)
+        if [ "$gpus" -gt "$sys_gpus" ]; then
+            echo "Machine has fewer GPUs ($sys_gpus) then input provided - $gpus";
+            helpFunction  
+        fi
+    fi
+    cmd+=" --gpus $gpus"
+
+    if [ ! -z $stop_server ] ; then
+        cmd+=" --stop_server $stop_server"
+    fi
+
+    if [ ! -z "$data" ] ; then
+        cmd+=" --data $data"
+    fi
+}
+
+function inference_exec_vm(){
+    echo "Running the Inference script";
+    echo "$cmd"
+    $cmd
+}
+
+function inference_exec_kubernetes()
+{   
+    echo "Config $KUBECONFIG"
+
+    if [ -z "$KUBECONFIG" ]; then
+        echo "Kube config environment variable is not set - KUBECONFIG"
+        exit 1 
+    fi
+
+    if [ -z "$gpus"  ] || [ "$gpus" -eq 0 ] 
+    then
+        gpus="0"
+    fi
+
+    validate_and_get_resources
+
+    mem+='Gi'
+    pip install kubernetes==26.1.0
+
+    echo "Running the Inference script";
+    python $wdir/kubernetes_run.py --image $image --command "$cmd" --gpu $gpus --cpu $cpu --mem $mem
+}
+
+function inference_exec_container()
+{
+    validate_and_get_resources
+    mem+='g'
+
+    echo "Running the Inference script";
+    docker_init_cmd="docker run --name torchserve --cpus $cpu --memory $mem -p 8080:8080 -p 8081:8081 -p 8082:8082 -d $image /bin/sh"
+
+    if [ "$gpus" -gt 0 ] 
+    then
+        docker_init_cmd+=" --gpus $gpus"
+    fi
+
+    echo "$docker_init_cmd"
+    $docker_init_cmd
+
+    docker_exec_cmd="docker exec -it torchserve $cmd"
+
+    echo "$docker_exec_cmd"
+    $docker_exec_cmd
+
+    if [ -z $stop_server ] ; then
+        echo "Stop Docker Container";
+        docker stop torchserve
+        echo "Remove Docker Container";
+        docker rm torchserve
+    fi
+}
+
+# Entry Point
+if [ -z "$compute_choice"  ] 
+then
+    compute_choice="vm"
 fi
-cmd+=" --gpus $gpus"
 
-if [ ! -z $stop_server ] ; then
-    cmd+=" --stop_server $stop_server"
-fi
+create_execution_cmd
+case $compute_choice in
+    "docker")
+        echo "Compute choice is docker."
+        inference_exec_container
+        ;;
 
-if [ ! -z "$data" ] ; then
-    cmd+=" --data $data"
-fi
+    "k8s")
+        echo "Compute choice is Kubernetes."
+        inference_exec_kubernetes
+        ;;
 
-echo "Running the Inference script";
-echo "$cmd"
-$cmd
-
+    "vm")
+        echo "Compute choice is VM."
+        inference_exec_vm
+        ;;
+    *)
+        echo "Invalid choice. Exiting."
+        echo "Please select a valid option:"
+        echo "1. k8s for Kubernetes env"
+        echo "2. vm for virtual machine env"
+        echo "3. docker for docker env"
+        exit 1
+        ;;
+esac
 
