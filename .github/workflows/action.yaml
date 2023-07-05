@@ -1,0 +1,19 @@
+name: Run Shell Script on Code Push
+
+on:
+ pull_request:
+    branches:
+      - main
+jobs:
+  vm_inference:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: prerequiste installations
+        run: sudo apt-get install openjdk-17-jdk python3-pip; pip install -r inference/code/torchserve/requirements.txt
+      
+      - name: run the inference script
+        run: bash inference/code/torchserve/run.sh -n resnet50
