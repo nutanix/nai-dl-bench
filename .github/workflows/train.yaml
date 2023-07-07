@@ -41,10 +41,10 @@ jobs:
         run: mkdir training/data/images; mkdir training/data/output; tar -xvf training/data/training_images.tar -C training/data/images
       
       - name: Build docker image
-        run: docker build -t test_image -f training/Dockerfile training/code
+        run: docker build -t training_image -f training/Dockerfile training/code
 
       - name: run training Script
-        run: bash training/code/run.sh -e docker  -c "python3 training.py --data-folder $PWD/training/data/images --output-folder $PWD/training/data/output" -i test_image -r "--gpu 0 --cpu 1 --mem 2g --shm 100000000" 
+        run: bash training/code/run.sh -e docker  -c "python3 training.py --data-folder $PWD/training/data/images --output-folder $PWD/training/data/output" -i training_image -r "--gpu 0 --cpu 1 --mem 2g --shm 100000000" 
 
   k8s_training:
     runs-on: ubuntu-latest
@@ -82,14 +82,14 @@ jobs:
           run: kubectl apply -f training/code/utils/storageclass.yaml; kubectl apply -f training/code/utils/pv.yaml; kubectl apply -f training/code/utils/pvc.yaml; sleep 20;  kubectl get pvc ; kubectl describe pvc output-pvc; kubectl describe pvc input-pvc
 
         - name: Build docker image and push to local registry
-          run: docker build -t test_image:latest -f training/Dockerfile training/code; docker push test_image:latest
+          run: docker build -t kind-registry:5000/training_image:v1 -f training/Dockerfile training/code; docker push kind-registry:5000/training_image:v1
 
         # - name: export KUBECONFIG and start kubernetes training
         #   run: |
         #     sudo rm -rf /usr/share/dotnet
         #     sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         #     export KUBECONFIG=~/.kube/config
-        #     bash training/code/run.sh -e k8s -n 1 -c 'python3 training.py --data-folder input-pvc:/home/runner/work/nai-dl-bench/nai-dl-bench/training/data/images --output-folder output-pvc:/tmp' -i test_image:latest -r "--gpu 0 --cpu 500m --mem 1Gi --shm 1Gi" 
+        #     bash training/code/run.sh -e k8s -n 1 -c 'python3 training.py --data-folder input-pvc:/home/runner/work/nai-dl-bench/nai-dl-bench/training/data/images --output-folder output-pvc:/tmp' -i kind-registry:5000/training_image:v1 -r "--gpu 0 --cpu 500m --mem 1Gi --shm 1Gi" 
 
 
     
