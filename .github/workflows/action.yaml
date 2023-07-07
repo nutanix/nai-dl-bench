@@ -1,0 +1,85 @@
+name: Run Shell Script on Code Push
+
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  vm_inference:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: prerequiste installations
+        run: sudo apt-get install openjdk-17-jdk python3-pip; pip install -r inference/code/torchserve/requirements.txt
+      
+      - name: run the inference script
+        run: 
+            bash inference/code/torchserve/run.sh -n resnet50; 
+            bash inference/code/torchserve/run.sh -n densenet161;
+            bash inference/code/torchserve/run.sh -n resnet50 -d inference/data;
+  
+  docker_inference:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: update apt package and add docker's official gpg key Setup docker repository
+        run: sudo apt-get update; sudo apt-get install ca-certificates curl gnupg; sudo install -m 0755 -d /etc/apt/keyrings; curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; sudo chmod a+r /etc/apt/keyrings/docker.gpg; 
+
+      - name: set up docker repo
+        run: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+      - name: Install docker engine
+        run: sudo apt-get update; sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      
+      - name: Build docker image
+        run: docker build -t inference_image -f inference/Dockerfile inference/
+
+      - name: run inference Script
+        run: bash inference/code/torchserve/run.sh -o docker -i inference_image -n resnet50 -d data -r "--cpu 1 --mem 2"
+
+  k8s_inference:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+
+        - name: update apt package and add docker's official gpg key Setup docker repository
+          run: sudo apt-get update; sudo apt-get install ca-certificates curl gnupg; sudo install -m 0755 -d /etc/apt/keyrings; curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg; sudo chmod a+r /etc/apt/keyrings/docker.gpg; 
+
+        - name: set up docker repo
+          run: echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        - name: Install docker engine
+          run: sudo apt-get update; sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+        - name: Create k8s Kind Cluster
+          uses: container-tools/kind-action@v1
+          with:
+            cluster_name: inference-cluster
+
+        - name: install kubectl and helm
+          run: sudo snap install kubectl --classic
+        
+        - name: Build docker image
+          run: docker build -t kind-registry:5000/inference_image:v1 -f inference/Dockerfile inference/ ; docker push kind-registry:5000/inference_image:v1
+
+        - name: export KUBECONFIG and run execution script
+          run: |
+            export KUBECONFIG=$HOME/.kube/config ; echo $KUBECONFIG
+            bash inference/code/torchserve/run.sh -o k8s -i kind-registry:5000/inference_image:v1 -n resnet50 -d data -r "--cpu 1 --mem 2"\
+
+        - name: Wait for setup to complete
+          run: sleep 300s
+          shell: bash
+
+        - name: kube status
+          run: kubectl get pods; kubectl get deploy; kubectl describe pod $(kubectl get pods --no-headers -o custom-columns=":metadata.name")
+
+        - name: kube cluster logs
+          run: kubectl logs $(kubectl get pods --no-headers -o custom-columns=":metadata.name")
