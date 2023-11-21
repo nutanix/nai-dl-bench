@@ -1,6 +1,6 @@
 torch==1.13.1
 torchvision==0.14.1
-torchserve==0.7.1
+torchserve==0.9.0
 torch-model-archiver==0.7.1
 torch-workflow-archiver==0.2.7
 captum==0.6.0
